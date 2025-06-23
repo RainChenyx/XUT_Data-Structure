@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <time.h>
 #define MAX_CARS 5 // 停车场最大容量
 
 // 车辆结构体
 typedef struct Car {
     char license_plate[20]; // 车牌号
-    int parking_time; // 停车时间（单位：秒）
+    time_t parking_time; // 停车时间
 } Car;
 
 // 便道车辆结点
@@ -20,6 +20,7 @@ typedef struct carNode {
 typedef struct Stack {
     Car* cars[MAX_CARS];
     int top;
+    int size;
 } Stack;
 
 // 初始化便道链表
@@ -41,9 +42,9 @@ int enLink(CNode* head, Car* car);
 Car* dequeue(CNode* head);
 void parkCar(Stack* parkingLot, CNode* head);
 void leaveCar(Stack* parkingLot, Stack* exit, CNode* head);
-void displayParkingLot(Stack* parkingLot);
-void displayRoadside(CNode* head);
+void displayParkingLotAndRoadside(Stack* parkingLot, CNode* head);
 void freeCars(CNode* head);
+float calculateFee(time_t parking_time);
 
 int main() {
     Stack parkingLot;
@@ -55,14 +56,19 @@ int main() {
 
     int choice;
     while (1) {
-        printf("\n停车场管理系统\n");
-        printf("1. 停车\n");
-        printf("2. 离开\n");
-        printf("3. 显示停车场\n");
-        printf("4. 显示便道\n");
-        printf("5. 退出\n");
+        printf("\n============================\n");
+        printf("= 欢迎来到曲江新区停车场管理系统 =\n");
+        printf("============================\n");
+        printf("= 1. 车辆停放                =\n");
+        printf("= 2. 车辆离开                =\n");
+        printf("= 3. 显示停车场和便道停放车辆   =\n");
+        printf("= 4. 员工车辆管理             =\n");
+        printf("= 5. 退出                   =\n");
+        printf("============================\n");
         printf("请选择操作: ");
         scanf("%d", &choice);
+        getchar();
+        system("cls");
 
         switch (choice) {
             case 1:
@@ -72,10 +78,7 @@ int main() {
                 leaveCar(&parkingLot, &exit, head);
                 break;
             case 3:
-                displayParkingLot(&parkingLot);
-                break;
-            case 4:
-                displayRoadside(head);
+                displayParkingLotAndRoadside(&parkingLot, head);
                 break;
             case 5:
                 freeCars(head);
@@ -89,9 +92,10 @@ int main() {
     return 0;
 }
 
-// 初始化停车场栈
+// 初始化停车场栈/退出栈
 void initStack(Stack* s) {
     s->top = -1;
+    s->size = 0;
 }
 
 // 判断栈是否满
@@ -108,6 +112,7 @@ int isStackEmpty(Stack* s) {
 void push(Stack* s, Car* car) {
     if (!isStackFull(s)) {
         s->cars[++(s->top)] = car;
+        s->size++;
     } else {
         printf("停车场已满，请在便道上排队等待。\n");
     }
@@ -185,22 +190,23 @@ int deLink(CNode *head, char *license_plate) {
     return 1;
 }
 
-// 停车
+// 车辆停车
 void parkCar(Stack* parkingLot, CNode* head) {
     Car* car = (Car*)malloc(sizeof(Car));
     printf("请输入车牌号: ");
     scanf("%s", car->license_plate);
+    car->parking_time = time(NULL); // 记录进入停车场的时间
 
     if (isStackFull(parkingLot)) {
         enLink(head, car);
         printf("停车场已满，车辆停在便道上，等待停车场分配空位。\n");
     } else {
         push(parkingLot, car);
-        printf("车辆已停入停车场。\n");
+        printf("车辆 %s 已停入停车场。\n",car->license_plate);
     }
 }
 
-// 离开
+// 车辆离开
 void leaveCar(Stack* parkingLot, Stack* exit, CNode* head) {
     if (isStackEmpty(parkingLot)) {
         printf("停车场为空，没有车辆可以离开。\n");
@@ -224,8 +230,9 @@ void leaveCar(Stack* parkingLot, Stack* exit, CNode* head) {
 
             // 离开车辆
             Car* leavingCar = pop(parkingLot);
-            printf("车辆 %s 离开停车场，停车时间: %d 秒，费用: %d 元\n",
-                   leavingCar->license_plate, leavingCar->parking_time, leavingCar->parking_time * 5);
+            float fee = calculateFee(leavingCar->parking_time);
+            int second = fee * 10;
+            printf("车辆 %s 离开停车场，停车时长： %d 秒，停车费用: %.2f 元\n", leavingCar->license_plate, second, fee);
             free(leavingCar);
 
             // 将退出栈中的车辆返回停车场
@@ -240,6 +247,7 @@ void leaveCar(Stack* parkingLot, Stack* exit, CNode* head) {
     // 检查便道是否有车辆可以进入停车场
     if (found ==1 && !isLinkEmpty(head)) {
         Car* nextCar = dequeue(head);
+        nextCar->parking_time = time(NULL); // 记录进入停车场的时间
         push(parkingLot, nextCar);
         printf("便道上的车辆 %s 进入停车场\n", nextCar->license_plate);
     }
@@ -250,7 +258,7 @@ void leaveCar(Stack* parkingLot, Stack* exit, CNode* head) {
         in = deLink(head,find);
         if(in == 1)
         {
-            printf("便道上的车辆 %s 离开\n", find);
+            printf("便道上的车辆 %s 离开，无收费\n", find);
         }
         if(in == 0)
         {
@@ -272,29 +280,41 @@ Car* dequeue(CNode* head) {
     return car;
 }
 
-// 显示停车场
-void displayParkingLot(Stack* parkingLot) {
-    if (isStackEmpty(parkingLot)) {
-        printf("停车场为空。\n");
-        return;
+// 显示停车场和便道
+void displayParkingLotAndRoadside(Stack* parkingLot, CNode* head) {
+    if(!isLinkEmpty(head))
+    {
+        printf("\n=================================================\n");
+        printf("= 便道车辆: ");
+        CNode *current = head->next;
+        while (current != NULL) {
+            printf(" %s --", current->car.license_plate);
+            current = current->next;
+        }
+        printf("\n");
     }
-    printf("停车场车辆:\n");
-    for (int i = parkingLot->top; i >= 0; i--) {
-        printf("车牌号: %s, 停车时间: %d 秒\n", parkingLot->cars[i]->license_plate, parkingLot->cars[i]->parking_time);
-    }
-}
 
-// 显示便道
-void displayRoadside(CNode* head) {
-    if (isLinkEmpty(head)) {
-        printf("便道为空。\n");
-        return;
+    if (isStackEmpty(parkingLot)) {
+        printf("               目前停车场无车辆停放              \n");
     }
-    printf("便道车辆:\n");
-    CNode *current = head->next;
-    while (current != NULL) {
-        printf("车牌号: %s\n", current->car.license_plate);
-        current = current->next;
+    printf("=================================================\n");
+    printf("=                     停车场                     =\n");
+    printf("=================================================\n");
+    for (int i = MAX_CARS-1; i >= 0; i--)
+    {
+        if(i <= parkingLot->top)
+        {
+            int total_time = parkingLot->cars[i]->parking_time;
+            int second = total_time % 60;
+            int minute = total_time / 60 % 60;
+            int hour = (total_time % 86400) / 3600 + 8;  // 北京时间是东八区，因此要加8小时
+            printf("=车牌号: %10s = 进入停车场的北京时间: %02d:%02d:%02d =\n", parkingLot->cars[i]->license_plate,hour,minute, second);
+        }
+        else
+        {
+            printf("=                       空                      =\n");
+        }
+        printf("=================================================\n");
     }
 }
 
@@ -307,4 +327,11 @@ void freeCars(CNode* head) {
         free(temp);
     }
     free(head); // 释放头节点
+}
+
+// 计算停车费用
+float calculateFee(time_t parking_time) {
+    time_t current_time = time(NULL);
+    float seconds = difftime(current_time, parking_time);
+    return seconds * 0.1; // 每秒0.1元
 }
