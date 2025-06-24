@@ -44,7 +44,7 @@ void push(Stack* s, Car* car);
 Car* pop(Stack* s);
 int isLinkEmpty(CNode *head);
 int enLink(CNode* head, Car* car);
-Car* dequeue(CNode* head);
+Car* deLink_first(CNode* head);
 void parkCar(Stack* parkingLot, CNode* head);
 void leaveCar(Stack* parkingLot, Stack* exit, CNode* head);
 void displayParkingLotAndRoadside(Stack* parkingLot, CNode* head);
@@ -55,12 +55,12 @@ void manageEmployeeCars();
 
 int main()
 {
-    Stack parkingLot;
-    Stack exit;
-    CNode *head;
-    initLink(&head);  // 初始化便道Link
-    initStack(&parkingLot); // 初始化停车场Stack
-    initStack(&exit); // 初始化退出栈Stack
+    Stack parkingLot;  //停车场栈
+    Stack exit;  // 退出栈
+    CNode *head;  // 链表的头结点
+    initLink(&head);  // 初始化便道链表
+    initStack(&parkingLot); // 初始化停车场栈
+    initStack(&exit); // 初始化退出栈
 
     int choice;
     while (1)
@@ -72,7 +72,7 @@ int main()
         printf("= 2. 车辆离开                =\n");
         printf("= 3. 显示停车场和便道停放车辆   =\n");
         printf("= 4. 员工车辆管理             =\n");
-        printf("= 5. 退出                   =\n");
+        printf("= 5. 退出程序                =\n");
         printf("============================\n");
         printf("请选择操作: ");
         scanf("%d", &choice);
@@ -81,22 +81,22 @@ int main()
         switch (choice)
         {
             case 1:
-                parkCar(&parkingLot, head);
+                parkCar(&parkingLot, head);  // 车辆停放
                 break;
             case 2:
-                leaveCar(&parkingLot, &exit, head);
+                leaveCar(&parkingLot, &exit, head);  // 车辆离开
                 break;
             case 3:
-                displayParkingLotAndRoadside(&parkingLot, head);
+                displayParkingLotAndRoadside(&parkingLot, head);  // 显示停车场和便道停放车辆
                 break;
             case 4:
-                manageEmployeeCars();
+                manageEmployeeCars();  // 员工车辆管理
                 break;
             case 5:
-                freeCars(head);
+                freeCars(head);  // 退出程序
                 break;
             default:
-                printf("无效的选择，请重试。\n");
+                printf("无效的选择，请重试\n");
         }
         if(choice == 5)
             break;
@@ -133,7 +133,7 @@ void push(Stack* s, Car* car)
     }
     else
     {
-        printf("停车场已满，请在便道上排队等待。\n");
+        printf("停车场已满，请在便道上排队等待\n");
     }
 }
 
@@ -162,11 +162,11 @@ int enLink(CNode* head, Car* car)
         printf("分配内存失败\n");
         return 0;
     }
-    newNode->car = *car; // 复制车辆信息
+    newNode->car = *car;
     newNode->next = NULL;
 
     CNode *p = head;
-    while (p->next != NULL)
+    while (p->next != NULL)  //找到最后一个结点
     {
         p = p->next;
     }
@@ -194,24 +194,20 @@ int deLink(CNode *head, char *license_plate)
     CNode *p = head;
     CNode *q = NULL;
 
-    // 遍历链表查找匹配的车牌号
     while (p != NULL && j <= len)
     {
         q = p; // 保存当前节点
         p = p->next; // 移动到下一个节点
 
-        // 检查是否找到匹配的车牌号
-        if (p != NULL && strcmp(p->car.license_plate, license_plate) == 0)
+        if (p != NULL && strcmp(p->car.license_plate, license_plate) == 0)  // 检查是否找到匹配的车牌号
             break;
 
         j++;
     }
 
-    // 如果未找到匹配的节点或链表为空
-    if (p == NULL)
+    if (p == NULL)  // 如果未找到匹配的节点或链表为空
         return 0;
 
-    // 删除找到的节点
     q->next = p->next; // 将前一个节点的next指向删除节点的下一个节点
     free(p); // 释放删除节点的内存
 
@@ -224,16 +220,16 @@ void parkCar(Stack* parkingLot, CNode* head)
     Car* car = (Car*)malloc(sizeof(Car));
     printf("请输入车牌号: ");
     scanf("%s", car->license_plate);
-    car->parking_time = time(NULL); // 记录进入停车场的时间
+    car->parking_time = time(NULL);  // 记录进入停车场的时间
 
     if (isStackFull(parkingLot))
     {
         enLink(head, car);
-        printf("停车场已满，车辆停在便道上，等待停车场分配空位。\n");
+        printf("停车场已满，车辆 %s 停在便道上，等待停车场分配空位\n", car->license_plate);
     } else
     {
         push(parkingLot, car);
-        printf("车辆 %s 已停入停车场。\n",car->license_plate);
+        printf("车辆 %s 已停入停车场\n", car->license_plate);
     }
 }
 
@@ -242,7 +238,7 @@ void leaveCar(Stack* parkingLot, Stack* exit, CNode* head)
 {
     if (isStackEmpty(parkingLot))
     {
-        printf("停车场为空，没有车辆可以离开。\n");
+        printf("停车场为空，没有车辆需要离开\n");
         return;
     }
 
@@ -250,28 +246,30 @@ void leaveCar(Stack* parkingLot, Stack* exit, CNode* head)
     printf("请输入车牌号：");
     scanf("%s", find);
 
-    // 查找停车场需要离开的车辆
-    int found = 0;
+    int found = 0;  // 查找停车场需要离开的车辆
     for (int i = parkingLot->top; i >= 0; i--)
     {
         if (strcmp(parkingLot->cars[i]->license_plate, find) == 0)
         {
             found = 1;
 
-            // 将后面的车辆移动到退出栈
+            // 将后面的车辆移动到退出栈中让目标车先开出来
             for (int j = parkingLot->top; j > i; j--)
             {
                 push(exit, pop(parkingLot));
             }
 
-            // 离开车辆
-            Car* leavingCar = pop(parkingLot);
-            float fee = calculateFee(leavingCar->parking_time);
-            if (isEmployeeCar(leavingCar->license_plate))
+            Car* leavingCar = pop(parkingLot);  // 驶出目标车辆
+            float fee = calculateFee(leavingCar->parking_time);  // 计算停车费用
+            if (fee > 100)
+            {
+                fee = 100 * (int)(fee/864);  // 单日上限停车费100元
+            }
+            if (isEmployeeCar(leavingCar->license_plate))  // 员工免车费
             {
                 fee = 0;
             }
-            int second = fee * 10;
+            int second = fee * 100;
             printf("车辆 %s 离开停车场，停车时长： %d 秒，停车费用: %.2f 元\n", leavingCar->license_plate, second, fee);
             free(leavingCar);
 
@@ -285,11 +283,11 @@ void leaveCar(Stack* parkingLot, Stack* exit, CNode* head)
         }
     }
 
-    // 检查便道是否有车辆可以进入停车场
+    // 检查便道是否有便道上的车辆需要进入停车场
     if (found ==1 && !isLinkEmpty(head))
     {
-        Car* nextCar = dequeue(head);
-        nextCar->parking_time = time(NULL); // 记录进入停车场的时间
+        Car* nextCar = deLink_first(head);
+        nextCar->parking_time = time(NULL); // 记录当前进入停车场的时间
         push(parkingLot, nextCar);
         printf("便道上的车辆 %s 进入停车场\n", nextCar->license_plate);
     }
@@ -300,7 +298,7 @@ void leaveCar(Stack* parkingLot, Stack* exit, CNode* head)
         in = deLink(head,find);
         if(in == 1)
         {
-            printf("便道上的车辆 %s 离开，无收费\n", find);
+            printf("便道上的车辆 %s 已离开，无收费\n", find);
         }
         if(in == 0)
         {
@@ -309,8 +307,8 @@ void leaveCar(Stack* parkingLot, Stack* exit, CNode* head)
     }
 }
 
-// 从便道中出队
-Car* dequeue(CNode* head)
+// 便道上第一辆车出队
+Car* deLink_first(CNode* head)
 {
     if (isLinkEmpty(head))
     {
@@ -345,7 +343,7 @@ void displayParkingLotAndRoadside(Stack* parkingLot, CNode* head)
         printf("               目前停车场无车辆停放              \n");
     }
     printf("=================================================\n");
-    printf("=                     停车场                     =\n");
+    printf("=                    停车场入口                   =\n");
     printf("=================================================\n");
     for (int i = MAX_CARS-1; i >= 0; i--)
     {
@@ -383,7 +381,7 @@ float calculateFee(time_t parking_time)
 {
     time_t current_time = time(NULL);
     float seconds = difftime(current_time, parking_time);
-    return seconds * 0.1; // 每秒0.1元
+    return seconds * 0.01;  // 每秒0.01元
 }
 
 // 检查车牌是否为员工车辆
@@ -391,7 +389,7 @@ int isEmployeeCar(const char* license_plate) {
     FILE *file = fopen(EMPLOYEE_FILE, "r");
     if (file == NULL)
     {
-        printf("无法打开员工车牌号文件。\n");
+        printf("无法打开员工车牌号文件\n");
         return 0;
     }
 
@@ -436,12 +434,12 @@ void manageEmployeeCars()
             FILE *file = fopen(EMPLOYEE_FILE, "a");
             if (file == NULL)
             {
-                printf("无法打开员工车牌号文件。\n");
+                printf("无法打开员工车牌号文件\n");
                 return;
             }
             fprintf(file, "%s\n", license_plate);
             fclose(file);
-            printf("员工车牌号 %s 已添加。\n", license_plate);
+            printf("员工车牌号 %s 已添加\n", license_plate);
             break;
         }
         case 2:
@@ -449,7 +447,7 @@ void manageEmployeeCars()
             FILE *file = fopen(EMPLOYEE_FILE, "r");
             if (file == NULL)
             {
-                printf("无法打开员工车牌号文件。\n");
+                printf("无法打开员工车牌号文件\n");
                 return;
             }
             char line[20];
@@ -474,13 +472,13 @@ void manageEmployeeCars()
             // 读取所有员工车牌号并排除要删除的车牌号
             FILE *file = fopen(EMPLOYEE_FILE, "r");
             if (file == NULL) {
-                printf("无法打开员工车牌号文件。\n");
+                printf("无法打开员工车牌号文件\n");
                 return;
             }
 
             FILE *temp_file = fopen("temp.txt", "w");
             if (temp_file == NULL) {
-                printf("无法创建临时文件。\n");
+                printf("无法创建临时文件\n");
                 fclose(file);
                 return;
             }
@@ -506,16 +504,16 @@ void manageEmployeeCars()
             rename("temp.txt", EMPLOYEE_FILE);
 
             if (found) {
-                printf("员工车牌号 %s 已删除。\n", license_plate);
+                printf("员工车牌号 %s 已删除\n", license_plate);
             } else {
-                printf("未找到员工车牌号 %s。\n", license_plate);
+                printf("未找到员工车牌号 %s\n", license_plate);
             }
             break;
         }
         case 4:
             break;
         default:
-            printf("无效的选择，请重试。\n");
+            printf("无效的选择，请重试\n");
             break;
     }
 }
